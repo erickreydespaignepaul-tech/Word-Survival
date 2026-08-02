@@ -1,8 +1,24 @@
 import { Motor } from './motor/motor.js';
 
-const motor = new Motor(document.getElementById('mundo'));
-document.getElementById('btn-empezar').addEventListener('click', () => {
-  document.getElementById('pantalla-inicio').hidden = true;
-  document.getElementById('hud').hidden = false;
-  motor.iniciar();
+const boton = document.getElementById('btn-empezar');
+const pantalla = document.getElementById('pantalla-inicio');
+const hud = document.getElementById('hud');
+
+let motor;
+try {
+  motor = new Motor(document.getElementById('mundo'));
+} catch (err) {
+  console.error('Error al crear Motor:', err);
+}
+
+boton.addEventListener('click', () => {
+  pantalla.hidden = true;
+  hud.hidden = false;
+  if (motor && typeof motor.iniciar === 'function') {
+    try {
+      motor.iniciar();
+    } catch (err) {
+      console.error('Error al iniciar motor:', err);
+    }
+  }
 });
