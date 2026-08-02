@@ -1,6 +1,1 @@
-// Controles del jugador
-export class Controles {
-    constructor(){
-        this.teclas = {};
-    }
-}
+export class Controles { constructor(){ this.teclas=new Set(); addEventListener('keydown',e=>this.teclas.add(e.key.toLowerCase())); addEventListener('keyup',e=>this.teclas.delete(e.key.toLowerCase())); } direccion(){ return {x:(this.teclas.has('d')||this.teclas.has('arrowright')?1:0)-(this.teclas.has('a')||this.teclas.has('arrowleft')?1:0), y:(this.teclas.has('s')||this.teclas.has('arrowdown')?1:0)-(this.teclas.has('w')||this.teclas.has('arrowup')?1:0)}; } }

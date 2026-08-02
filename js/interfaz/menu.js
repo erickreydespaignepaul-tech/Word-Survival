@@ -1,0 +1,13 @@
+export class Interfaz {
+  constructor(motor){this.motor=motor;this.modales=document.getElementById('modales');this.mensaje=document.getElementById('mensaje');this.abierto=null;}
+  activar(){addEventListener('keydown',e=>{if(e.repeat)return;const tecla=e.key.toLowerCase();if(tecla==='e')this.inventario();if(tecla==='q')this.palabras();if(tecla==='c')this.personaje();if(tecla==='r')this.crafteo();if(tecla==='escape')this.cerrar();});}
+  actualizarHud(){const p=this.motor.jugador.posicion;document.getElementById('posicion').textContent=`X: ${Math.round(p.x/40)} · Y: ${Math.round(p.y/40)}`;}
+  abrir(contenido){this.modales.innerHTML=`<section class="modal">${contenido}</section>`;this.abierto=true;this.modales.querySelector('[data-cerrar]')?.addEventListener('click',()=>this.cerrar());}
+  cerrar(){this.modales.innerHTML='';this.abierto=null;}
+  cabecera(titulo){return `<header><h2>${titulo}</h2><button type="button" data-cerrar>Cerrar</button></header>`;}
+  inventario(){const inv=this.motor.inventario;const casillas=Array.from({length:inv.capacidad},(_,i)=>`<div class="casilla">${inv.items[i]||'<span class="muted">Vacío</span>'}</div>`).join('');this.abrir(`${this.cabecera('Inventario')}<div class="rejilla">${casillas}</div><p class="muted">Materiales: madera ${inv.cantidad('madera')} · piedra ${inv.cantidad('piedra')}</p>`);}
+  personaje(){const j=this.motor.jugador;this.abrir(`${this.cabecera('Personaje')}<p><strong>Superviviente</strong></p><p>Vida: ${j.vida}/100</p><p>Manos: vacías</p><p class="muted">El personaje comienza sin espada. Fabrica herramientas en Crafteo.</p>`);}
+  palabras(){const l=this.motor.lenguaje;this.abrir(`${this.cabecera('Palabras')}<p>Descubiertas: ${l.lista().length}/${l.total}</p><div class="rejilla">${l.lista().map(p=>`<div class="casilla">${p}</div>`).join('')}</div>`);}
+  crafteo(){const c=this.motor.crafteo;const recetas=c.recetas.map(r=>`<div class="receta"><span><strong>${r.nombre}</strong><br><small>${Object.entries(r.requisitos).map(([n,x])=>`${n} ×${x}`).join(' · ')}</small></span><button type="button" data-receta="${r.nombre}">Crear</button></div>`).join('');this.abrir(`${this.cabecera('Crafteo')}${recetas}`);this.modales.querySelectorAll('[data-receta]').forEach(b=>b.addEventListener('click',()=>{const ok=c.crear(b.dataset.receta);this.notificar(ok?`${b.dataset.receta} creado.`:'No tienes materiales suficientes.');this.crafteo();}));}
+  notificar(texto){this.mensaje.textContent=texto;this.mensaje.classList.add('visible');clearTimeout(this.timer);this.timer=setTimeout(()=>this.mensaje.classList.remove('visible'),2300);}
+}

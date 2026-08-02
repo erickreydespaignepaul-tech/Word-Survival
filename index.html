@@ -1,33 +1,28 @@
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>WORD SURVIVAL ∞</title><style>body{margin:0;background:#111;color:white;text-align:center;font-family:Arial}canvas{border:2px solid #555}</style></head><body><h1>WORD SURVIVAL ∞</h1><button onclick="iniciar()">INICIAR</button><canvas id="mundo" width="640" height="480"></canvas><script>
-const c=document.getElementById('mundo'),ctx=c.getContext('2d');
-const TILE=40,CHUNK=16,PIXEL=4;
-let jugador={x:0,y:0,anim:0,caminar:false},cam={x:0,y:0},teclas={},activo=false,mundo={};
-const COLOR={1:'#2277cc',2:'#55aa55',3:'#8b5a2b',4:'#777777',5:'#8b4513'};
-function ruido(x,y){let n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n)}
-function textura(material,semilla){let pixels=[],colores={1:['#2277cc','#4499ee'],2:['#55aa55','#438f43'],3:['#8b5a2b','#6b421d'],4:['#777','#999'],5:['#8b4513','#a06020']};let lista=colores[material];for(let i=0;i<100;i++){let r=ruido(semilla,i);pixels.push({activo:r>.65,color:lista[Math.floor(r*lista.length)]})}return pixels}
-function bloque(cx,cy,x,y){let wx=cx*CHUNK+x,wy=cy*CHUNK+y,r=ruido(wx,wy),id=r<.15?1:r>.82?4:r>.72?3:2;return{x:wx*TILE,y:wy*TILE,id,pixeles:textura(id,wx*999+wy)}}
-function generarChunk(cx,cy){let key=cx+','+cy;if(mundo[key])return;mundo[key]=[];for(let x=0;x<CHUNK;x++)for(let y=0;y<CHUNK;y++)mundo[key].push(bloque(cx,cy,x,y))}
-function cargar(){let cx=Math.floor(jugador.x/(CHUNK*TILE)),cy=Math.floor(jugador.y/(CHUNK*TILE));for(let x=-2;x<=2;x++)for(let y=-2;y<=2;y++)generarChunk(cx+x,cy+y)}
-function dibujarBloque(b,x,y){ctx.fillStyle=COLOR[b.id];ctx.fillRect(x,y,TILE,TILE);b.pixeles.forEach((p,i)=>{if(p.activo){ctx.fillStyle=p.color;ctx.fillRect(x+(i%10)*PIXEL,y+Math.floor(i/10)*PIXEL,PIXEL,PIXEL)}})}
-
-// Personaje humano procedural
-function dibujarJugador(){
- let x=310,y=210;
- let paso=jugador.caminar?Math.sin(jugador.anim)*4:0;
- // cabeza
- ctx.fillStyle='#d99b72';ctx.fillRect(x+8,y,14,14);
- // pelo
- ctx.fillStyle='#332211';ctx.fillRect(x+8,y,14,4);
- // cuerpo
- ctx.fillStyle='#3366cc';ctx.fillRect(x+5,y+14,20,20);
- // brazos
- ctx.fillStyle='#d99b72';ctx.fillRect(x,y+16,5,14);ctx.fillRect(x+25,y+16,5,14);
- // piernas animadas
- ctx.fillStyle='#222';ctx.fillRect(x+8,y+34+paso,6,12);ctx.fillRect(x+18,y+34-paso,6,12);
-}
-function iniciar(){activo=true;cargar();bucle()}
-document.onkeydown=e=>teclas[e.key.toLowerCase()]=1;document.onkeyup=e=>teclas[e.key.toLowerCase()]=0;
-function actualizar(){jugador.caminar=false;if(teclas.w){jugador.y-=3;jugador.caminar=true}if(teclas.s){jugador.y+=3;jugador.caminar=true}if(teclas.a){jugador.x-=3;jugador.caminar=true}if(teclas.d){jugador.x+=3;jugador.caminar=true}if(jugador.caminar)jugador.anim+=.25;cam.x=jugador.x-320;cam.y=jugador.y-240;cargar()}
-function dibujar(){ctx.clearRect(0,0,640,480);Object.values(mundo).flat().forEach(b=>{let x=b.x-cam.x,y=b.y-cam.y;if(x>-40&&x<680&&y>-40&&y<520)dibujarBloque(b,x,y)});dibujarJugador()}
-function bucle(){if(!activo)return;actualizar();dibujar();requestAnimationFrame(bucle)}
-</script></body></html>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WORD SURVIVAL ∞</title>
+  <link rel="stylesheet" href="css/estilos/principal.css">
+</head>
+<body>
+  <main id="aplicacion">
+    <canvas id="mundo" width="960" height="600" aria-label="Mundo de Word Survival"></canvas>
+    <section id="pantalla-inicio" class="pantalla">
+      <p class="sobrelinea">UN MUNDO HECHO DE PALABRAS</p>
+      <h1>WORD <span>SURVIVAL</span></h1>
+      <p>Explora, recoge recursos y descubre palabras.</p>
+      <button id="btn-empezar" type="button">JUGAR</button>
+      <small>WASD / flechas para moverte</small>
+    </section>
+    <section id="hud" hidden>
+      <div class="panel estado"><strong>WORD SURVIVAL</strong><span id="posicion">X: 0 · Y: 0</span></div>
+      <div id="ayuda" class="panel">E Inventario &nbsp; C Personaje &nbsp; Q Palabras &nbsp; R Crafteo</div>
+      <div id="mensaje" class="mensaje" aria-live="polite"></div>
+    </section>
+    <div id="modales"></div>
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
