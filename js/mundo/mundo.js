@@ -2,7 +2,7 @@ import { Chunks } from './chunks.js';
 import { BLOQUES, colorBloque, detalleBloque } from './bloques.js';
 
 export class Mundo {
-  constructor() { this.tamanoTile=40; this.chunks=new Chunks(16); }
+  constructor() { this.tamanoTile = 40; this.chunks = new Chunks(16); }
   cargarCerca(pos) { this.chunks.cargarCerca(pos.x / (this.tamanoTile*16), pos.y / (this.tamanoTile*16)); }
 
   recogerEn(x, y, posJugador) {
@@ -49,5 +49,32 @@ export class Mundo {
         ctx.fillStyle='#777';ctx.beginPath();ctx.arc(x+Math.floor(t*0.5),y+Math.floor(t*0.55),12,0,Math.PI*2);ctx.fill();
       }
     });
+
+    // dibujar drops (recursos sueltos)
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
+    this.chunks.dropsVisibles(camX, camY, ancho, alto, t).forEach(d=>{
+      const dx = Math.floor(d.x*t - camX), dy = Math.floor(d.y*t - camY);
+      // representación simple: caja + texto
+      ctx.fillStyle = '#c08b4e';
+      ctx.fillRect(dx + 12, dy + 12, 16, 16);
+      ctx.fillStyle = '#000';
+      ctx.fillText(d.item, dx + 6, dy + 10);
+    });
+  }
+
+  // recoger drops alrededor de pos (en píxeles) y añadir al inventario
+  recogerDrops(pos, inventario) {
+    const items = this.chunks.recogerDropsEnPos(pos, this.tamanoTile, 20);
+    for (const it of items) {
+      if (inventario && typeof inventario.agregar === 'function') {
+        inventario.agregar(it.item, it.cantidad || 1);
+      } else if (inventario && inventario.items) {
+        // compatibilidad con inventarios en mapa u array
+        if (Array.isArray(inventario.items)) inventario.items.push({ item: it.item, cantidad: it.cantidad || 1 });
+        else inventario.items[it.item] = (inventario.items[it.item] || 0) + (it.cantidad || 1);
+      }
+    }
+    return items;
   }
 }
