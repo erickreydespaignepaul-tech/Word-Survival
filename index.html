@@ -1,50 +1,35 @@
-<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><title>WORD SURVIVAL ∞</title><style>body{margin:0;background:#111;color:white;text-align:center;font-family:Arial}canvas{border:2px solid #555}button{padding:15px}</style></head>
-<body>
-<h1>WORD SURVIVAL ∞</h1><button onclick="iniciar()">INICIAR</button><canvas id="mundo" width="640" height="480"></canvas>
-<script>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>WORD SURVIVAL ∞</title><style>body{margin:0;background:#111;color:white;text-align:center;font-family:Arial}canvas{border:2px solid #555}</style></head><body><h1>WORD SURVIVAL ∞</h1><button onclick="iniciar()">INICIAR</button><canvas id="mundo" width="640" height="480"></canvas><script>
 const c=document.getElementById('mundo'),ctx=c.getContext('2d');
-let jugador={x:0,y:0};let teclas={};let activo=false;let objetos=[];let cam={x:0,y:0};
+const PIXEL=4,TILE=40,CHUNK=16;
+let jugador={x:0,y:0},cam={x:0,y:0},teclas={},activo=false,mundo={};
+const COLORES={pasto:'#55aa55',tierra:'#8b5a2b',piedra:'#777',madera:'#8b4513',hoja:'#174d17',agua:'#2277cc'};
 
-// Biblioteca de colores del juego
-const COLORES={
- pasto:'#55aa55', pastoClaro:'#5dbb63', tierra:'#8b5a2b', agua:'#2277cc', piedra:'#777777',
- madera:'#8b4513', hoja:'#174d17', fuego:'#ff6600', hielo:'#99ddff', hierro:'#444444'
-};
+function ruido(x,y){let n=Math.sin(x*12.9898+y*78.233)*43758.5453;return n-Math.floor(n)}
 
-// Sistema de texturas creadas por pixeles
-function textura(tipo,x,y,tam=40){
- let color=COLORES[tipo];
- ctx.fillStyle=color;ctx.fillRect(x,y,tam,tam);
- for(let i=0;i<20;i++){
-  let px=x+Math.random()*tam;
-  let py=y+Math.random()*tam;
-  ctx.fillStyle=variar(color);
-  ctx.fillRect(px,py,2,2);
- }
-}
-function variar(hex){return hex;}
-
-function generarChunk(cx,cy){
- for(let x=0;x<16;x++){
-  for(let y=0;y<16;y++){
-   let r=Math.random();
-   if(r<0.05)objetos.push({x:(cx*16+x)*40,y:(cy*16+y)*40,tipo:'madera'});
-   if(r>0.95)objetos.push({x:(cx*16+x)*40,y:(cy*16+y)*40,tipo:'piedra'});
+function crearTextura(tipo,x,y){
+ ctx.fillStyle=COLORES[tipo];ctx.fillRect(x,y,TILE,TILE);
+ for(let px=0;px<TILE;px+=PIXEL){
+  for(let py=0;py<TILE;py+=PIXEL){
+   if(ruido(x+px,y+py)>0.65){
+    ctx.fillStyle=tipo==='pasto'?'#438f43':tipo==='piedra'?'#999':tipo==='madera'?'#a06020':'#704020';
+    ctx.fillRect(x+px,y+py,PIXEL,PIXEL);
+   }
   }
  }
 }
 
-function iniciar(){activo=true;generarChunk(0,0);bucle();}
-document.addEventListener('keydown',e=>teclas[e.key.toLowerCase()]=true);
-document.addEventListener('keyup',e=>teclas[e.key.toLowerCase()]=false);
-function actualizar(){if(teclas.w)jugador.y-=3;if(teclas.s)jugador.y+=3;if(teclas.a)jugador.x-=3;if(teclas.d)jugador.x+=3;cam.x=jugador.x-320;cam.y=jugador.y-240;}
-function dibujar(){
- ctx.clearRect(0,0,640,480);
- for(let x=0;x<640;x+=40)for(let y=0;y<480;y+=40)textura('pasto',x,y);
- objetos.forEach(o=>textura(o.tipo,o.x-cam.x,o.y-cam.y));
- ctx.fillStyle='blue';ctx.fillRect(310,230,20,20);
- ctx.fillStyle='white';ctx.fillText('Motor de pixeles activo',10,20);
+function generarChunk(cx,cy){
+ let id=cx+','+cy;if(mundo[id])return;mundo[id]=[];
+ for(let x=0;x<CHUNK;x++)for(let y=0;y<CHUNK;y++){
+  let r=ruido(cx*CHUNK+x,cy*CHUNK+y);let tipo='pasto';
+  if(r>.92)tipo='piedra';else if(r>.86)tipo='madera';
+  mundo[id].push({x:(cx*CHUNK+x)*TILE,y:(cy*CHUNK+y)*TILE,tipo});
+ }
 }
+function cargarChunks(){let cx=Math.floor(jugador.x/(CHUNK*TILE));let cy=Math.floor(jugador.y/(CHUNK*TILE));for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)generarChunk(cx+x,cy+y)}
+function iniciar(){activo=true;cargarChunks();bucle()}
+document.onkeydown=e=>teclas[e.key.toLowerCase()]=1;document.onkeyup=e=>teclas[e.key.toLowerCase()]=0;
+function actualizar(){if(teclas.w)jugador.y-=3;if(teclas.s)jugador.y+=3;if(teclas.a)jugador.x-=3;if(teclas.d)jugador.x+=3;cam.x=jugador.x-320;cam.y=jugador.y-240;cargarChunks()}
+function dibujar(){ctx.clearRect(0,0,640,480);Object.values(mundo).flat().forEach(b=>{let x=b.x-cam.x,y=b.y-cam.y;if(x>-40&&x<680&&y>-40&&y<520)crearTextura(b.tipo,x,y)});ctx.fillStyle='blue';ctx.fillRect(310,230,20,20);ctx.fillText('Generacion pixel real',10,20)}
 function bucle(){if(!activo)return;actualizar();dibujar();requestAnimationFrame(bucle)}
 </script></body></html>
