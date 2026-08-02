@@ -1,7 +1,5 @@
-// Sistema del jugador
 export class Jugador {
-    constructor(){
-        this.vida = 100;
-        this.posicion = {x:0,y:0,z:0};
-    }
+  constructor() { this.posicion={x:0,y:0}; this.velocidad=190; this.direccion='abajo'; this.animacion=0; this.moviendo=false; this.vida=100; }
+  actualizar(dir, dt) { this.moviendo=Boolean(dir.x||dir.y); if (!this.moviendo) return; const largo=Math.hypot(dir.x,dir.y)||1; this.posicion.x+=dir.x/largo*this.velocidad*dt; this.posicion.y+=dir.y/largo*this.velocidad*dt; this.animacion+=dt*10; if(Math.abs(dir.x)>Math.abs(dir.y)) this.direccion=dir.x>0?'derecha':'izquierda'; else this.direccion=dir.y>0?'abajo':'arriba'; }
+  dibujar(ctx,x,y) { const paso=this.moviendo?Math.sin(this.animacion)*4:0; ctx.save(); ctx.translate(Math.round(x),Math.round(y)); ctx.fillStyle='#33231d';ctx.fillRect(-8,-26,16,6); ctx.fillStyle='#e5aa80';ctx.fillRect(-7,-22,14,14); ctx.fillStyle='#3f7dcc';ctx.fillRect(-10,-8,20,18); ctx.fillStyle='#e5aa80';ctx.fillRect(-15,-6,5,14);ctx.fillRect(10,-6,5,14);ctx.fillStyle='#26303b';ctx.fillRect(-8,10+paso,6,13);ctx.fillRect(2,10-paso,6,13);ctx.restore(); }
 }

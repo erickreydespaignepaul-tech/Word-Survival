@@ -1,9 +1,1 @@
-// Motor semantico de palabras
-export class MotorSemantico {
-    constructor(){
-        this.diccionario = {};
-    }
-    agregarPalabra(palabra, dato){
-        this.diccionario[palabra] = dato;
-    }
-}
+export class MotorSemantico { constructor(){this.total=20000;this.palabras=new Set(['agua','árbol','piedra','fuego']);} descubrir(palabra){this.palabras.add(palabra.toLowerCase());} conoce(palabra){return this.palabras.has(palabra.toLowerCase());} lista(){return [...this.palabras].sort();} }

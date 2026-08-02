@@ -1,9 +1,1 @@
-// Sistema de inventario
-export class Inventario {
-    constructor(){
-        this.items = [];
-    }
-    agregar(item){
-        this.items.push(item);
-    }
-}
+export class Inventario { constructor(){this.capacidad=10;this.items=[];} cantidad(nombre){return this.items.filter(i=>i===nombre).length;} agregar(item,cantidad=1){for(let i=0;i<cantidad&&this.items.length<this.capacidad;i++)this.items.push(item);return this.items.length<this.capacidad;} tiene(requisitos){return Object.entries(requisitos).every(([i,c])=>this.cantidad(i)>=c);} quitar(requisitos){if(!this.tiene(requisitos))return false;for(const [item,cantidad] of Object.entries(requisitos))for(let i=0;i<cantidad;i++)this.items.splice(this.items.indexOf(item),1);return true;} }
