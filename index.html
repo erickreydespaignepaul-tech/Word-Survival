@@ -2,34 +2,45 @@
 const c=document.getElementById('mundo'),ctx=c.getContext('2d');
 const PIXEL=4,TILE=40,CHUNK=16;
 let jugador={x:0,y:0},cam={x:0,y:0},teclas={},activo=false,mundo={};
-const COLORES={pasto:'#55aa55',tierra:'#8b5a2b',piedra:'#777',madera:'#8b4513',hoja:'#174d17',agua:'#2277cc'};
 
-function ruido(x,y){let n=Math.sin(x*12.9898+y*78.233)*43758.5453;return n-Math.floor(n)}
+// ID de colores/materiales
+const MATERIAL={
+ agua:1, pasto:2, tierra:3, piedra:4, madera:5, hoja:6
+};
+const COLOR={
+1:'#2277cc',2:'#55aa55',3:'#8b5a2b',4:'#777777',5:'#8b4513',6:'#174d17'
+};
 
-function crearTextura(tipo,x,y){
- ctx.fillStyle=COLORES[tipo];ctx.fillRect(x,y,TILE,TILE);
- for(let px=0;px<TILE;px+=PIXEL){
-  for(let py=0;py<TILE;py+=PIXEL){
-   if(ruido(x+px,y+py)>0.65){
-    ctx.fillStyle=tipo==='pasto'?'#438f43':tipo==='piedra'?'#999':tipo==='madera'?'#a06020':'#704020';
-    ctx.fillRect(x+px,y+py,PIXEL,PIXEL);
-   }
+// crea una textura unica y la guarda en el bloque
+function crearPixelado(id){
+ let datos=[];
+ for(let x=0;x<10;x++){
+  for(let y=0;y<10;y++){
+   let r=(id*31+x*17+y*13)%100;
+   datos.push(r>70?1:0);
   }
  }
+ return datos;
+}
+
+function dibujarBloque(b,x,y){
+ ctx.fillStyle=COLOR[b.id];ctx.fillRect(x,y,TILE,TILE);
+ ctx.fillStyle=b.id===3?'#6b421d':b.id===2?'#438f43':'#999';
+ b.pixeles.forEach((p,i)=>{if(p){let px=i%10,py=Math.floor(i/10);ctx.fillRect(x+px*PIXEL,y+py*PIXEL,PIXEL,PIXEL)}});
 }
 
 function generarChunk(cx,cy){
- let id=cx+','+cy;if(mundo[id])return;mundo[id]=[];
+ let key=cx+','+cy;if(mundo[key])return;mundo[key]=[];
  for(let x=0;x<CHUNK;x++)for(let y=0;y<CHUNK;y++){
-  let r=ruido(cx*CHUNK+x,cy*CHUNK+y);let tipo='pasto';
-  if(r>.92)tipo='piedra';else if(r>.86)tipo='madera';
-  mundo[id].push({x:(cx*CHUNK+x)*TILE,y:(cy*CHUNK+y)*TILE,tipo});
+  let r=(Math.sin((cx*CHUNK+x)*12.3+(cy*CHUNK+y)*5.7)+1)/2;
+  let id=r>.9?4:r>.82?5:3;
+  mundo[key].push({x:(cx*CHUNK+x)*TILE,y:(cy*CHUNK+y)*TILE,id,pixeles:crearPixelado((cx*CHUNK+x)*1000+(cy*CHUNK+y))});
  }
 }
-function cargarChunks(){let cx=Math.floor(jugador.x/(CHUNK*TILE));let cy=Math.floor(jugador.y/(CHUNK*TILE));for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)generarChunk(cx+x,cy+y)}
-function iniciar(){activo=true;cargarChunks();bucle()}
+function cargar(){let cx=Math.floor(jugador.x/(CHUNK*TILE)),cy=Math.floor(jugador.y/(CHUNK*TILE));for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)generarChunk(cx+x,cy+y)}
+function iniciar(){activo=true;cargar();bucle()}
 document.onkeydown=e=>teclas[e.key.toLowerCase()]=1;document.onkeyup=e=>teclas[e.key.toLowerCase()]=0;
-function actualizar(){if(teclas.w)jugador.y-=3;if(teclas.s)jugador.y+=3;if(teclas.a)jugador.x-=3;if(teclas.d)jugador.x+=3;cam.x=jugador.x-320;cam.y=jugador.y-240;cargarChunks()}
-function dibujar(){ctx.clearRect(0,0,640,480);Object.values(mundo).flat().forEach(b=>{let x=b.x-cam.x,y=b.y-cam.y;if(x>-40&&x<680&&y>-40&&y<520)crearTextura(b.tipo,x,y)});ctx.fillStyle='blue';ctx.fillRect(310,230,20,20);ctx.fillText('Generacion pixel real',10,20)}
+function actualizar(){if(teclas.w)jugador.y-=3;if(teclas.s)jugador.y+=3;if(teclas.a)jugador.x-=3;if(teclas.d)jugador.x+=3;cam.x=jugador.x-320;cam.y=jugador.y-240;cargar()}
+function dibujar(){ctx.clearRect(0,0,640,480);Object.values(mundo).flat().forEach(b=>{let x=b.x-cam.x,y=b.y-cam.y;if(x>-40&&x<680&&y>-40&&y<520)dibujarBloque(b,x,y)});ctx.fillStyle='blue';ctx.fillRect(310,230,20,20);}
 function bucle(){if(!activo)return;actualizar();dibujar();requestAnimationFrame(bucle)}
 </script></body></html>
