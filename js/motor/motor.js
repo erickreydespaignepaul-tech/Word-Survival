@@ -5,13 +5,14 @@ import { MotorSemantico } from '../lenguaje/motorSemantico.js';
 import { Crafteo } from '../crafteo/crafteo.js';
 import { Interfaz } from '../interfaz/menu.js';
 import { Controles } from '../jugador/controles.js';
+import { Recolector } from '../recursos/recolector.js';
 
 export class Motor {
   constructor(canvas) {
     this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.mundo = new Mundo(); this.jugador = new Jugador(); this.inventario = new Inventario();
     this.lenguaje = new MotorSemantico(); this.crafteo = new Crafteo(this.inventario);
-    this.ui = new Interfaz(this); this.controles = new Controles(); this.activo = false; this.ultimo = 0;
+    this.ui = new Interfaz(this); this.controles = new Controles(); this.recolector = new Recolector(this); this.activo = false; this.ultimo = 0;
     this.redimensionar(); addEventListener('resize', () => this.redimensionar());
   }
   redimensionar() { this.canvas.width = innerWidth * devicePixelRatio; this.canvas.height = innerHeight * devicePixelRatio; this.ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
