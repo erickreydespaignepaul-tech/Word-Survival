@@ -8,6 +8,7 @@ export class Chunks {
   clave(x,y){return `${x},${y}`;}
 
   biome(wx,wy){
+    // biomas calculados a escala grande para regiones coherentes
     const n=ruido(Math.floor(wx/20),Math.floor(wy/20));
     if(n<0.2)return 'desierto';
     if(n>0.82)return 'nieve';
@@ -26,16 +27,35 @@ export class Chunks {
         const wx=cx*this.tamano+x;
         const wy=cy*this.tamano+y;
         const b=this.biome(wx,wy);
-        const n=ruido(wx,wy);
+        // ruido de región y ruido local (para detalle)
+        const regionSeed = ruido(Math.floor(wx/20),Math.floor(wy/20));
+        const n = ruido(wx,wy);
         const montaña=altura(wx,wy)>1.1;
-        let tipo=BLOQUES.HIERBA;
 
-        if(b==='desierto') tipo=n<0.05?BLOQUES.ROCA:BLOQUES.TIERRA;
-        if(b==='nieve') tipo=n<0.15?BLOQUES.ROCA:BLOQUES.HIERBA;
-        if(b==='montana') tipo=montaña?BLOQUES.ROCA:BLOQUES.TIERRA;
-        if(b==='pantano') tipo=n<0.15?BLOQUES.AGUA:BLOQUES.HIERBA;
-        if(b==='bosque' && n>0.82) tipo=BLOQUES.ARBOL;
+        // usar la función tipoDesdeSemilla para consistencia y luego aplicar reglas de bioma
+        let tipo = tipoDesdeSemilla(n);
 
+        // ajustar según bioma para evitar resultados extraños (por ejemplo, agua en desierto)
+        if(b==='desierto'){
+          if(tipo===BLOQUES.AGUA||tipo===BLOQUES.ARBOL) tipo = BLOQUES.TIERRA;
+          if(n<0.05) tipo = BLOQUES.ROCA;
+        }
+        else if(b==='nieve'){
+          if(tipo===BLOQUES.AGUA) tipo = BLOQUES.HIERBA;
+          if(n<0.15) tipo = BLOQUES.ROCA;
+        }
+        else if(b==='montana'){
+          tipo = montaña ? BLOQUES.ROCA : (tipo===BLOQUES.AGUA?BLOQUES.TIERRA:tipo);
+        }
+        else if(b==='pantano'){
+          if(n<0.15) tipo = BLOQUES.AGUA;
+          else if(tipo===BLOQUES.ARBOL) tipo = BLOQUES.HIERBA;
+        }
+        else if(b==='bosque'){
+          if(n>0.82) tipo = BLOQUES.ARBOL;
+        }
+
+        // vetas/minerales con prioridad alta (ocurren independientemente del bioma en pequeñas probabilidades)
         if(n>0.965) tipo=BLOQUES.HIERRO;
         else if(n>0.93) tipo=BLOQUES.CARBON;
 
@@ -85,5 +105,8 @@ export class Chunks {
   }
 
   spawnDrop(wx,wy,drop){this.drops.push({x:wx,y:wy,...drop});}
-  dropsVisibles(camX,camY,ancho,alto,tile){return this.drops;}
+  dropsVisibles(camX,camY,ancho,alto,tile){
+    // filtrar drops por cámara para mejorar rendimiento
+    return this.drops.filter(d=>d.x*tile>camX-tile&&d.x*tile<camX+ancho&&d.y*tile>camY-tile&&d.y*tile<camY+alto);
+  }
 }
