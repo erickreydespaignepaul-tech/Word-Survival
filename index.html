@@ -1,91 +1,50 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WORD SURVIVAL ∞</title>
-<style>
-body{margin:0;background:#111;color:white;font-family:Arial;text-align:center}
-#juego{display:none}canvas{background:#4caf50;border:2px solid #555}button{padding:15px 30px;font-size:18px}
-</style>
-</head>
+<html lang="es"><head><meta charset="UTF-8"><title>WORD SURVIVAL ∞</title><style>body{margin:0;background:#111;color:white;text-align:center;font-family:Arial}canvas{border:2px solid #555}button{padding:15px}</style></head>
 <body>
-<h1>WORD SURVIVAL ∞</h1>
-<button onclick="iniciar()">INICIAR</button>
-<div id="juego">
-<p>Nivel: 1 | Mundo infinito</p>
-<canvas id="mundo" width="640" height="480"></canvas>
-</div>
+<h1>WORD SURVIVAL ∞</h1><button onclick="iniciar()">INICIAR</button><canvas id="mundo" width="640" height="480"></canvas>
 <script>
-const canvas=document.getElementById('mundo');
-const ctx=canvas.getContext('2d');
-let jugador={x:320,y:240,tam:20};
-let teclas={};
-let activo=false;
-let objetos=[];
-let camara={x:0,y:0};
-const tamTile=40;
+const c=document.getElementById('mundo'),ctx=c.getContext('2d');
+let jugador={x:0,y:0};let teclas={};let activo=false;let objetos=[];let cam={x:0,y:0};
 
-function generarMundo(){
- objetos=[];
- for(let x=-20;x<20;x++){
-  for(let y=-20;y<20;y++){
+// Biblioteca de colores del juego
+const COLORES={
+ pasto:'#55aa55', pastoClaro:'#5dbb63', tierra:'#8b5a2b', agua:'#2277cc', piedra:'#777777',
+ madera:'#8b4513', hoja:'#174d17', fuego:'#ff6600', hielo:'#99ddff', hierro:'#444444'
+};
+
+// Sistema de texturas creadas por pixeles
+function textura(tipo,x,y,tam=40){
+ let color=COLORES[tipo];
+ ctx.fillStyle=color;ctx.fillRect(x,y,tam,tam);
+ for(let i=0;i<20;i++){
+  let px=x+Math.random()*tam;
+  let py=y+Math.random()*tam;
+  ctx.fillStyle=variar(color);
+  ctx.fillRect(px,py,2,2);
+ }
+}
+function variar(hex){return hex;}
+
+function generarChunk(cx,cy){
+ for(let x=0;x<16;x++){
+  for(let y=0;y<16;y++){
    let r=Math.random();
-   if(r<0.08) objetos.push({x:x*tamTile,y:y*tamTile,tipo:'arbol'});
-   else if(r<0.12) objetos.push({x:x*tamTile,y:y*tamTile,tipo:'piedra'});
+   if(r<0.05)objetos.push({x:(cx*16+x)*40,y:(cy*16+y)*40,tipo:'madera'});
+   if(r>0.95)objetos.push({x:(cx*16+x)*40,y:(cy*16+y)*40,tipo:'piedra'});
   }
  }
 }
 
-function iniciar(){
- document.getElementById('juego').style.display='block';
- generarMundo();
- activo=true;
- bucle();
-}
-
+function iniciar(){activo=true;generarChunk(0,0);bucle();}
 document.addEventListener('keydown',e=>teclas[e.key.toLowerCase()]=true);
 document.addEventListener('keyup',e=>teclas[e.key.toLowerCase()]=false);
-
-function actualizar(){
- if(teclas.w)jugador.y-=3;
- if(teclas.s)jugador.y+=3;
- if(teclas.a)jugador.x-=3;
- if(teclas.d)jugador.x+=3;
- camara.x=jugador.x-320;
- camara.y=jugador.y-240;
-}
-
+function actualizar(){if(teclas.w)jugador.y-=3;if(teclas.s)jugador.y+=3;if(teclas.a)jugador.x-=3;if(teclas.d)jugador.x+=3;cam.x=jugador.x-320;cam.y=jugador.y-240;}
 function dibujar(){
  ctx.clearRect(0,0,640,480);
- // suelo infinito por cuadrícula
- for(let x=0;x<640;x+=tamTile){
-  for(let y=0;y<480;y+=tamTile){
-   ctx.fillStyle=((x+y)/tamTile%2)?'#5dbb63':'#55aa55';
-   ctx.fillRect(x,y,tamTile,tamTile);
-  }
- }
- // objetos del mundo
- objetos.forEach(o=>{
-  let sx=o.x-camara.x;
-  let sy=o.y-camara.y;
-  if(sx>-50&&sx<700&&sy>-50&&sy<530){
-   ctx.fillStyle=o.tipo==='arbol'?'#174d17':'#777';
-   ctx.fillRect(sx+10,sy+10,20,30);
-  }
- });
- ctx.fillStyle='blue';
- ctx.fillRect(310,230,20,20);
- ctx.fillStyle='white';
- ctx.fillText('Explora el mundo infinito',10,20);
+ for(let x=0;x<640;x+=40)for(let y=0;y<480;y+=40)textura('pasto',x,y);
+ objetos.forEach(o=>textura(o.tipo,o.x-cam.x,o.y-cam.y));
+ ctx.fillStyle='blue';ctx.fillRect(310,230,20,20);
+ ctx.fillStyle='white';ctx.fillText('Motor de pixeles activo',10,20);
 }
-
-function bucle(){
- if(!activo)return;
- actualizar();
- dibujar();
- requestAnimationFrame(bucle);
-}
-</script>
-</body>
-</html>
+function bucle(){if(!activo)return;actualizar();dibujar();requestAnimationFrame(bucle)}
+</script></body></html>
