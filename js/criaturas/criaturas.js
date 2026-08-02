@@ -1,3 +1,5 @@
+import { ModeloAnimal } from './modelos.js';
+
 // Sistema de criaturas
 export class Criaturas {
     constructor(){
@@ -9,12 +11,24 @@ export class Criaturas {
     }
 
     crear(tipo,x,y){
-        this.lista.push({tipo,x,y,vida:100,animacion:0});
+        this.lista.push({
+            tipo,x,y,
+            vida:100,
+            animacion:Math.random()*10,
+            modelo:new ModeloAnimal(tipo)
+        });
     }
 
     actualizar(dt){
         for(const criatura of this.lista){
             criatura.animacion += dt;
+            criatura.x += Math.sin(criatura.animacion)*dt*3;
+        }
+    }
+
+    dibujar(ctx){
+        for(const criatura of this.lista){
+            criatura.modelo.dibujar(ctx,criatura.x,criatura.y,criatura.animacion);
         }
     }
 }
