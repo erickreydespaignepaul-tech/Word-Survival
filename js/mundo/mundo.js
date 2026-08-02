@@ -23,16 +23,30 @@ export class Mundo {
 
   dibujar(ctx,pos,ancho,alto){
     const t=this.tamanoTile,camX=pos.x-ancho/2,camY=pos.y-alto/2;
-    this.chunks.bloquesVisibles(camX,camY,ancho,alto,t).forEach(b=>{
+    // Obtener bloques visibles una sola vez
+    const visibles = this.chunks.bloquesVisibles(camX,camY,ancho,alto,t);
+
+    // 1) Dibujar capa de suelo (tiles y detalle) para todos los bloques visibles
+    visibles.forEach(b=>{
       const x=Math.floor(b.x*t-camX),y=Math.floor(b.y*t-camY);
       ctx.fillStyle=colorBloque(b.tipo);ctx.fillRect(x,y,t+1,t+1);
       detalleBloque(ctx,b.tipo,x,y,t,b.semilla);
+    });
+
+    // 2) Dibujar objetos/decors (árboles, rocas, minerales) ordenados por y para correcto solapamiento
+    visibles.sort((a,b)=> (a.y - b.y));
+    visibles.forEach(b=>{
+      const x=Math.floor(b.x*t-camX),y=Math.floor(b.y*t-camY);
       if(b.tipo===BLOQUES.ARBOL){
-        ctx.fillStyle='#68401e';ctx.fillRect(x+18,y-10,10,50);
-        ctx.fillStyle='#236b37';ctx.beginPath();ctx.arc(x+23,y-12,28,0,Math.PI*2);ctx.fill();
+        // tronco
+        ctx.fillStyle='#68401e';
+        // ajustar para que el tronco se dibuje por encima del tile anterior (no sea "cortado")
+        ctx.fillRect(x+Math.floor(t*0.45),y-10,Math.floor(t*0.25),50);
+        // copa
+        ctx.fillStyle='#236b37';ctx.beginPath();ctx.arc(x+Math.floor(t*0.575),y-12,Math.floor(t*0.7),0,Math.PI*2);ctx.fill();
       }
       if(b.tipo===BLOQUES.ROCA||b.tipo===BLOQUES.HIERRO||b.tipo===BLOQUES.CARBON){
-        ctx.fillStyle='#777';ctx.beginPath();ctx.arc(x+20,y+22,12,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#777';ctx.beginPath();ctx.arc(x+Math.floor(t*0.5),y+Math.floor(t*0.55),12,0,Math.PI*2);ctx.fill();
       }
     });
   }
