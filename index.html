@@ -4,25 +4,35 @@ const TILE=40,CHUNK=16,PIXEL=4;
 let jugador={x:0,y:0},cam={x:0,y:0},teclas={},activo=false,mundo={};
 const COLOR={1:'#2277cc',2:'#55aa55',3:'#8b5a2b',4:'#777777',5:'#8b4513'};
 
-// Semilla procedural: el mismo lugar siempre genera lo mismo
 function ruido(x,y){let n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n)}
 
-function textura(id,seed){let p=[];for(let i=0;i<100;i++){p.push(ruido(seed,i)>0.7)}return p}
+// Cada bloque tiene su propio patron de pixeles y colores secundarios
+function textura(material,semilla){
+ let pixels=[];
+ let colores={
+ 1:['#2277cc','#4499ee'],
+ 2:['#55aa55','#438f43','#77cc66'],
+ 3:['#8b5a2b','#6b421d','#a06a35'],
+ 4:['#777777','#999999','#555555'],
+ 5:['#8b4513','#a06020','#633010']
+ };
+ let lista=colores[material];
+ for(let i=0;i<100;i++){
+  let r=ruido(semilla,i);
+  pixels.push({activo:r>0.65,color:lista[Math.floor(r*lista.length)]});
+ }
+ return pixels;
+}
 
 function bloque(cx,cy,x,y){
  let wx=cx*CHUNK+x,wy=cy*CHUNK+y;
- let altura=ruido(wx,wy);
- let id=2;
- if(altura<0.15)id=1;
- else if(altura>0.82)id=4;
- else if(altura>0.72)id=3;
+ let altura=ruido(wx,wy);let id=2;
+ if(altura<0.15)id=1;else if(altura>0.82)id=4;else if(altura>0.72)id=3;
  return {x:wx*TILE,y:wy*TILE,id,pixeles:textura(id,wx*999+wy)};
 }
-
 function generarChunk(cx,cy){let key=cx+','+cy;if(mundo[key])return;mundo[key]=[];for(let x=0;x<CHUNK;x++)for(let y=0;y<CHUNK;y++)mundo[key].push(bloque(cx,cy,x,y))}
 function cargar(){let cx=Math.floor(jugador.x/(CHUNK*TILE)),cy=Math.floor(jugador.y/(CHUNK*TILE));for(let x=-2;x<=2;x++)for(let y=-2;y<=2;y++)generarChunk(cx+x,cy+y)}
-
-function dibujarBloque(b,x,y){ctx.fillStyle=COLOR[b.id];ctx.fillRect(x,y,TILE,TILE);ctx.fillStyle='#654321';b.pixeles.forEach((p,i)=>{if(p){ctx.fillRect(x+(i%10)*PIXEL,y+Math.floor(i/10)*PIXEL,PIXEL,PIXEL)}})}
+function dibujarBloque(b,x,y){ctx.fillStyle=COLOR[b.id];ctx.fillRect(x,y,TILE,TILE);b.pixeles.forEach((p,i)=>{if(p.activo){ctx.fillStyle=p.color;ctx.fillRect(x+(i%10)*PIXEL,y+Math.floor(i/10)*PIXEL,PIXEL,PIXEL)}})}
 function iniciar(){activo=true;cargar();bucle()}
 document.onkeydown=e=>teclas[e.key.toLowerCase()]=1;document.onkeyup=e=>teclas[e.key.toLowerCase()]=0;
 function actualizar(){if(teclas.w)jugador.y-=3;if(teclas.s)jugador.y+=3;if(teclas.a)jugador.x-=3;if(teclas.d)jugador.x+=3;cam.x=jugador.x-320;cam.y=jugador.y-240;cargar()}
