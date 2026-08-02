@@ -4,6 +4,7 @@ body { margin:0; overflow:hidden; }
 #aplicacion, #mundo { width:100vw; height:100vh; display:block; }
 #mundo { image-rendering:pixelated; background:#79c9e8; }
 .pantalla { position:fixed; inset:0; display:grid; place-content:center; gap:14px; text-align:center; background:linear-gradient(#163a54b8,#14251ad9); }
+.pantalla[hidden] { display:none; }
 .pantalla h1 { margin:0; font-size:clamp(42px,8vw,90px); letter-spacing:.08em; color:#f5e8b2; text-shadow:5px 5px #283617; }
 .pantalla h1 span { color:#8fc660; }.sobrelinea { margin:0; letter-spacing:.18em; color:#bde1ef; font-size:12px; }
 button { justify-self:center; border:0; padding:14px 38px; border-radius:8px; cursor:pointer; font-weight:800; font-size:16px; color:#162514; background:#a8d66c; box-shadow:0 4px #507b3a; }
