@@ -1,46 +1,31 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>WORD SURVIVAL ∞</title><style>body{margin:0;background:#111;color:white;text-align:center;font-family:Arial}canvas{border:2px solid #555}</style></head><body><h1>WORD SURVIVAL ∞</h1><button onclick="iniciar()">INICIAR</button><canvas id="mundo" width="640" height="480"></canvas><script>
 const c=document.getElementById('mundo'),ctx=c.getContext('2d');
-const PIXEL=4,TILE=40,CHUNK=16;
+const TILE=40,CHUNK=16,PIXEL=4;
 let jugador={x:0,y:0},cam={x:0,y:0},teclas={},activo=false,mundo={};
+const COLOR={1:'#2277cc',2:'#55aa55',3:'#8b5a2b',4:'#777777',5:'#8b4513'};
 
-// ID de colores/materiales
-const MATERIAL={
- agua:1, pasto:2, tierra:3, piedra:4, madera:5, hoja:6
-};
-const COLOR={
-1:'#2277cc',2:'#55aa55',3:'#8b5a2b',4:'#777777',5:'#8b4513',6:'#174d17'
-};
+// Semilla procedural: el mismo lugar siempre genera lo mismo
+function ruido(x,y){let n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n)}
 
-// crea una textura unica y la guarda en el bloque
-function crearPixelado(id){
- let datos=[];
- for(let x=0;x<10;x++){
-  for(let y=0;y<10;y++){
-   let r=(id*31+x*17+y*13)%100;
-   datos.push(r>70?1:0);
-  }
- }
- return datos;
+function textura(id,seed){let p=[];for(let i=0;i<100;i++){p.push(ruido(seed,i)>0.7)}return p}
+
+function bloque(cx,cy,x,y){
+ let wx=cx*CHUNK+x,wy=cy*CHUNK+y;
+ let altura=ruido(wx,wy);
+ let id=2;
+ if(altura<0.15)id=1;
+ else if(altura>0.82)id=4;
+ else if(altura>0.72)id=3;
+ return {x:wx*TILE,y:wy*TILE,id,pixeles:textura(id,wx*999+wy)};
 }
 
-function dibujarBloque(b,x,y){
- ctx.fillStyle=COLOR[b.id];ctx.fillRect(x,y,TILE,TILE);
- ctx.fillStyle=b.id===3?'#6b421d':b.id===2?'#438f43':'#999';
- b.pixeles.forEach((p,i)=>{if(p){let px=i%10,py=Math.floor(i/10);ctx.fillRect(x+px*PIXEL,y+py*PIXEL,PIXEL,PIXEL)}});
-}
+function generarChunk(cx,cy){let key=cx+','+cy;if(mundo[key])return;mundo[key]=[];for(let x=0;x<CHUNK;x++)for(let y=0;y<CHUNK;y++)mundo[key].push(bloque(cx,cy,x,y))}
+function cargar(){let cx=Math.floor(jugador.x/(CHUNK*TILE)),cy=Math.floor(jugador.y/(CHUNK*TILE));for(let x=-2;x<=2;x++)for(let y=-2;y<=2;y++)generarChunk(cx+x,cy+y)}
 
-function generarChunk(cx,cy){
- let key=cx+','+cy;if(mundo[key])return;mundo[key]=[];
- for(let x=0;x<CHUNK;x++)for(let y=0;y<CHUNK;y++){
-  let r=(Math.sin((cx*CHUNK+x)*12.3+(cy*CHUNK+y)*5.7)+1)/2;
-  let id=r>.9?4:r>.82?5:3;
-  mundo[key].push({x:(cx*CHUNK+x)*TILE,y:(cy*CHUNK+y)*TILE,id,pixeles:crearPixelado((cx*CHUNK+x)*1000+(cy*CHUNK+y))});
- }
-}
-function cargar(){let cx=Math.floor(jugador.x/(CHUNK*TILE)),cy=Math.floor(jugador.y/(CHUNK*TILE));for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)generarChunk(cx+x,cy+y)}
+function dibujarBloque(b,x,y){ctx.fillStyle=COLOR[b.id];ctx.fillRect(x,y,TILE,TILE);ctx.fillStyle='#654321';b.pixeles.forEach((p,i)=>{if(p){ctx.fillRect(x+(i%10)*PIXEL,y+Math.floor(i/10)*PIXEL,PIXEL,PIXEL)}})}
 function iniciar(){activo=true;cargar();bucle()}
 document.onkeydown=e=>teclas[e.key.toLowerCase()]=1;document.onkeyup=e=>teclas[e.key.toLowerCase()]=0;
 function actualizar(){if(teclas.w)jugador.y-=3;if(teclas.s)jugador.y+=3;if(teclas.a)jugador.x-=3;if(teclas.d)jugador.x+=3;cam.x=jugador.x-320;cam.y=jugador.y-240;cargar()}
-function dibujar(){ctx.clearRect(0,0,640,480);Object.values(mundo).flat().forEach(b=>{let x=b.x-cam.x,y=b.y-cam.y;if(x>-40&&x<680&&y>-40&&y<520)dibujarBloque(b,x,y)});ctx.fillStyle='blue';ctx.fillRect(310,230,20,20);}
+function dibujar(){ctx.clearRect(0,0,640,480);Object.values(mundo).flat().forEach(b=>{let x=b.x-cam.x,y=b.y-cam.y;if(x>-40&&x<680&&y>-40&&y<520)dibujarBloque(b,x,y)});ctx.fillStyle='blue';ctx.fillRect(310,230,20,20)}
 function bucle(){if(!activo)return;actualizar();dibujar();requestAnimationFrame(bucle)}
 </script></body></html>
