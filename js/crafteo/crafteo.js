@@ -1,1 +1,13 @@
-export class Crafteo { constructor(inventario){this.inventario=inventario;this.recetas=[{nombre:'Hacha de piedra',requisitos:{madera:2,piedra:2}},{nombre:'Fogata',requisitos:{madera:3,piedra:3}}];} crear(nombre){const receta=this.recetas.find(r=>r.nombre===nombre);if(!receta||!this.inventario.quitar(receta.requisitos))return false;this.inventario.agregar(receta.nombre);return true;} }
+import { RECETAS } from './recetas.js';
+import * as mecanica from './mecanica.js';
+
+export class Crafteo {
+  constructor(inventario) { this.inventario = inventario; this.recetas = RECETAS; }
+
+  listarDisponibles() { return this.recetas.filter(r => mecanica.puedeCraftear(this.inventario, r)); }
+
+  craftear(id) {
+    const r = this.recetas.find(x => x.id === id); if (!r) return false;
+    return mecanica.craftear(this.inventario, r);
+  }
+}
