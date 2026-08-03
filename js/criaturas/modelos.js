@@ -1,5 +1,5 @@
 // Generador procedimental de sprites para criaturas
-// Ahora genera cuerpos, cabeza, patas (como triángulos si procede), orejas, cola y patrones
+// Ahora genera cuerpos, cabeza, patas en el estilo visual del humano.
 const cache = new Map();
 
 function hashString(s){
@@ -12,22 +12,37 @@ function colorFromHash(h, offset=0){
   return `rgb(${(r%200)+20},${(g%200)+20},${(b%200)+20})`;
 }
 
+function mulberry32(a){
+  return function(){
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
 function lerp(a,b,t){ return a + (b-a)*t; }
 
 export class ModeloAnimal {
-  constructor(specie){
+  // ahora acepta seed opcional para que el sprite sea reproducible por mundo/posición
+  constructor(specie, seed = null){
     this.specie = specie;
+    this.seed = (seed === null) ? hashString(specie.nombre) : (seed >>> 0);
     this.size = Math.floor((specie.tamaño||1)*28)+18; // rango más grande: 18..46
     this.img = this._generateImage();
   }
 
   _generateImage(){
-    const key = this.specie.nombre;
+    const key = this.specie.nombre + ':' + this.seed;
     if(cache.has(key)) return cache.get(key);
     const s = this.size;
     const canvas = document.createElement('canvas');
     canvas.width = s; canvas.height = s; const ctx = canvas.getContext('2d');
-    const h = hashString(key);
+
+    // PRNG a partir de seed para determinar patrones de forma reproducible
+    const rand = mulberry32(this.seed);
+    const h = hashString(this.specie.nombre ^ this.seed);
+
     ctx.clearRect(0,0,s,s);
 
     // parámetros derivados de hash y especie
@@ -35,146 +50,86 @@ export class ModeloAnimal {
     const colorBody = colorFromHash(h,0);
     const colorAccent = colorFromHash(h,8);
     const patternColor = colorFromHash(h,16);
-    const bodyType = h % 4; // 0: oval, 1: rect, 2: pear, 3: long
-    const headType = (h>>2) % 3; // 0: circle,1:square,2:triangle
-    const legStyle = (h>>4) % 3; // 0: triangle (pedido),1: rect,2: simple line
-    const legCount = (base==='pollo' || base==='pajaro') ? 2 : ((base==='araña')?8:((base==='insecto')?6:4));
-    const hasTail = !['oveja','vaca','cerdo'].includes(base) && ((h>>6)%2===1);
-    const hasEars = ['vaca','cerdo','oveja','conejo','zorro','lobo','ciervo','tigre','jaguar'].includes(base) || ((h>>7)%2===1);
+    const outline = 'rgba(20,20,20,0.95)';
+    const hasTail = !['oveja','vaca','cerdo'].includes(base) && (Math.floor(rand()*10)%2===1);
+    const hasEars = ['vaca','cerdo','oveja','conejo','zorro','lobo','ciervo','tigre','jaguar'].includes(base) || (Math.floor(rand()*10)%2===1);
 
-    // escalas
-    const bodyW = Math.floor(s * lerp(0.45,0.75, (h%100)/100));
-    const bodyH = Math.floor(s * lerp(0.25,0.55, ((h>>8)%100)/100));
-    const bodyX = (s - bodyW)/2;
-    const bodyY = s - bodyH - Math.floor(s*0.12);
+    // proporciones uniformes al estilo humano: cuerpo más cuadrado, cabeza proporcional
+    const bodyW = Math.floor(s * 0.62);
+    const bodyH = Math.floor(s * 0.48);
+    const bodyX = Math.floor((s - bodyW) / 2);
+    const bodyY = s - bodyH - Math.floor(s * 0.12);
+    const headR = Math.max(5, Math.floor(s * 0.12));
+    let headCX = bodyX + Math.floor(bodyW * 0.75);
+    let headCY = bodyY + Math.floor(bodyH * 0.22);
+    if(base === 'pez' || base === 'tortuga'){ headCX = bodyX + Math.floor(bodyW*0.5); headCY = bodyY + Math.floor(bodyH*0.15); }
 
-    // dibujar sombra
-    ctx.fillStyle = 'rgba(0,0,0,0.12)';
-    ctx.beginPath();
-    ctx.ellipse(s/2, s-4, bodyW*0.55, 4, 0, 0, Math.PI*2);
-    ctx.fill();
+    // contorno grueso tipo "humano"
+    ctx.lineWidth = Math.max(1, Math.floor(s * 0.06));
+    ctx.strokeStyle = outline;
 
-    // cuerpo según tipo
-    ctx.fillStyle = colorBody;
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = 1;
+    // sombra
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(s/2, s-3, bodyW*0.6, Math.max(3,Math.floor(s*0.04)), 0, 0, Math.PI*2); ctx.fill();
 
-    if(bodyType===0){ // oval
-      ctx.beginPath(); ctx.ellipse(bodyX+bodyW/2, bodyY+bodyH/2, bodyW/2, bodyH/2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    } else if(bodyType===1){ // rect redondeado
-      const r = Math.max(2, Math.floor(bodyH*0.25));
-      roundRect(ctx, bodyX, bodyY, bodyW, bodyH, r, true, true);
-    } else if(bodyType===2){ // forma pera (cuerpo más ancho atrás)
-      ctx.beginPath();
-      ctx.ellipse(bodyX + bodyW*0.45, bodyY+bodyH/2, bodyW*0.45, bodyH/2, 0, 0, Math.PI*2);
-      ctx.ellipse(bodyX + bodyW*0.68, bodyY+bodyH*0.45, bodyW*0.32, bodyH*0.4, 0, 0, Math.PI*2);
-      ctx.fill(); ctx.stroke();
-    } else { // largo tipo reptil
-      ctx.beginPath();
-      roundRect(ctx, bodyX, bodyY+Math.floor(bodyH*0.15), bodyW, Math.floor(bodyH*0.7), Math.max(2,Math.floor(bodyH*0.2)), true, true);
-    }
+    // cuerpo (relleno simple, contorno)
+    ctx.fillStyle = colorBody; ctx.beginPath();
+    roundRect(ctx, bodyX, bodyY, bodyW, bodyH, Math.max(3,Math.floor(bodyH*0.2)), true, false);
+    ctx.stroke();
 
     // cabeza
-    const headR = Math.max(4, Math.floor(s*0.12 * lerp(0.8,1.2, ((h>>10)%100)/100)));
-    let headCX = bodyX + Math.floor(bodyW*0.75);
-    let headCY = bodyY + Math.floor(bodyH*0.25);
-    if(base==='pez' || base==='tortuga') { headCX = bodyX + Math.floor(bodyW*0.5); headCY = bodyY + Math.floor(bodyH*0.15); }
-
     ctx.fillStyle = colorAccent;
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = 1;
-    if(headType===0){ // circular
-      ctx.beginPath(); ctx.arc(headCX, headCY, headR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    } else if(headType===1){ // cuadrada
-      roundRect(ctx, headCX-headR, headCY-headR, headR*2, headR*2, Math.max(2,Math.floor(headR*0.3)), true, true);
-    } else { // triangular
-      ctx.beginPath(); ctx.moveTo(headCX, headCY-headR); ctx.lineTo(headCX-headR, headCY+headR); ctx.lineTo(headCX+headR, headCY+headR); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(headCX, headCY, headR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // ojos estilo humano (más arriba, ovales)
+    ctx.fillStyle = '#000';
+    const eyeX = Math.max(2, Math.floor(headR*0.4));
+    const eyeY = headCY - Math.max(1, Math.floor(headR*0.25));
+    ctx.beginPath(); ctx.ellipse(headCX - eyeX, eyeY, Math.max(1,Math.floor(headR*0.18)), Math.max(1,Math.floor(headR*0.12)), 0, 0, Math.PI*2); ctx.fill();
+    if(base !== 'serpiente') { ctx.beginPath(); ctx.ellipse(headCX + eyeX, eyeY, Math.max(1,Math.floor(headR*0.18)), Math.max(1,Math.floor(headR*0.12)), 0, 0, Math.PI*2); ctx.fill(); }
+
+    // nariz/boca sutil
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(headCX - Math.floor(headR*0.12), headCY + Math.floor(headR*0.18), Math.max(1,Math.floor(headR*0.25)), 1);
+
+    // patas triangulares estilizadas
+    const legW = Math.max(3, Math.floor(s*0.06));
+    const legH = Math.max(6, Math.floor(s*0.14));
+    const legCount = (base==='pollo'||base==='pajaro')?2:4;
+    const spacing = bodyW / (legCount + 1);
+    ctx.fillStyle = colorAccent;
+    ctx.lineWidth = Math.max(1, Math.floor(s*0.02));
+    for(let i=0;i<legCount;i++){
+      const lx = bodyX + spacing*(i+1);
+      const ly = bodyY + bodyH;
+      ctx.beginPath();
+      ctx.moveTo(lx - legW, ly);
+      ctx.lineTo(lx + legW, ly);
+      ctx.lineTo(lx, ly + legH);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
     }
 
-    // ojos (simple)
-    ctx.fillStyle = '#000';
-    const eyeOffsetX = Math.max(2, Math.floor(headR*0.35));
-    const eyeY = headCY - Math.floor(headR*0.2);
-    ctx.beginPath(); ctx.arc(headCX - eyeOffsetX, eyeY, Math.max(1,Math.floor(headR*0.16)), 0, Math.PI*2); ctx.fill();
-    if(base!=='serpiente') { ctx.beginPath(); ctx.arc(headCX + eyeOffsetX, eyeY, Math.max(1,Math.floor(headR*0.16)), 0, Math.PI*2); ctx.fill(); }
+    // patrones (deterministas) en el mismo estilo
+    ctx.fillStyle = patternColor;
+    const patternCount = 1 + Math.floor(rand()*2);
+    for(let i=0;i<patternCount;i++){
+      const pw = Math.max(4, Math.floor(bodyW*0.18));
+      const ph = Math.max(3, Math.floor(bodyH*0.12));
+      const px = bodyX + Math.floor((0.2 + rand()*0.6) * bodyW) - Math.floor(pw/2);
+      const py = bodyY + Math.floor((0.2 + rand()*0.6) * bodyH) - Math.floor(ph/2);
+      ctx.beginPath(); ctx.ellipse(px+pw/2, py+ph/2, pw/2, ph/2, 0, 0, Math.PI*2); ctx.fill();
+    }
 
-    // orejas/cuernos si aplica
+    // orejas/cuernos si aplica (estilizados)
     if(hasEars){
-      ctx.fillStyle = colorAccent;
-      const earW = Math.max(2, Math.floor(headR*0.5));
-      const earH = Math.max(3, Math.floor(headR*0.8));
+      ctx.fillStyle = colorAccent; const earW = Math.max(2, Math.floor(headR*0.5)); const earH = Math.max(3, Math.floor(headR*0.8));
       ctx.beginPath(); ctx.moveTo(headCX-headR+2, headCY-headR/2); ctx.lineTo(headCX-headR+2-earW, headCY-headR/2 - earH); ctx.lineTo(headCX-headR+6, headCY-headR/2 + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(headCX+headR-2, headCY-headR/2); ctx.lineTo(headCX+headR-2+earW, headCY-headR/2 - earH); ctx.lineTo(headCX+headR-6, headCY-headR/2 + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
 
     // cola si aplica
-    if(hasTail){
-      ctx.save();
-      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-      ctx.lineWidth = Math.max(2, Math.floor(s*0.035));
-      ctx.beginPath();
-      const tx0 = bodyX + bodyW - Math.floor(bodyW*0.08);
-      const ty0 = bodyY + Math.floor(bodyH*0.55);
-      ctx.moveTo(tx0, ty0);
-      ctx.quadraticCurveTo(tx0 + Math.floor(bodyW*0.25), ty0 - Math.floor(bodyH*0.3), tx0 + Math.floor(bodyW*0.45), ty0 - Math.floor(bodyH*0.05));
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // patas: triangulos (por petición) o rectas/lineas
-    const legW = Math.max(3, Math.floor(s*0.06));
-    const legH = Math.max(6, Math.floor(s*0.12));
-    const spacing = bodyW / (Math.max(legCount,2)+1);
-    ctx.fillStyle = colorAccent;
-    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-    for(let i=0;i<legCount;i++){
-      const lx = bodyX + spacing*(i+1);
-      const ly = bodyY + bodyH;
-      if(legStyle===0 || base==='humano' || base==='pollo'){
-        // triángulo con punta abajo ("patas triangulares")
-        ctx.beginPath();
-        ctx.moveTo(lx - legW, ly);
-        ctx.lineTo(lx + legW, ly);
-        ctx.lineTo(lx, ly + legH);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-      } else if(legStyle===1){
-        roundRect(ctx, lx - legW, ly, legW*2, legH, Math.max(1,Math.floor(legW*0.4)), true, true);
-      } else {
-        // simple línea
-        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx, ly+legH); ctx.stroke();
-        ctx.fillRect(lx-2, ly+legH-2, 4, 4);
-      }
-    }
-
-    // patrón: manchas o franjas
-    if((h>>12)%2===0){
-      // manchas
-      ctx.fillStyle = patternColor;
-      for(let i=0;i<3;i++){
-        const pw = Math.max(3, Math.floor(bodyW*0.12*(1 - i*0.2)));
-        const ph = Math.max(2, Math.floor(bodyH*0.1*(1 - i*0.1)));
-        const px = bodyX + Math.floor(Math.random()* (bodyW - pw));
-        const py = bodyY + Math.floor(Math.random()* (bodyH - ph));
-        ctx.beginPath(); ctx.ellipse(px+pw/2, py+ph/2, pw/2, ph/2, 0, 0, Math.PI*2); ctx.fill();
-      }
-    } else {
-      // franjas
-      ctx.fillStyle = patternColor;
-      const stripes = 2 + (h%3);
-      for(let i=0;i<stripes;i++){
-        const sxp = bodyX + i*(bodyW/stripes);
-        ctx.fillRect(sxp, bodyY + Math.floor(bodyH*0.05), Math.max(3,Math.floor(bodyW/stripes*0.25)), Math.floor(bodyH*0.9));
-      }
-    }
-
-    // pequeño detalle: boca
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    if(base==='serpiente'){
-      ctx.fillRect(headCX - Math.floor(headR*0.4), headCY + Math.floor(headR*0.35), Math.floor(headR*0.8), 1);
-    } else {
-      ctx.fillRect(headCX - Math.floor(headR*0.3), headCY + Math.floor(headR*0.4), Math.floor(headR*0.6), 1);
-    }
+    if(hasTail){ ctx.save(); ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1, Math.floor(s*0.03)); ctx.beginPath(); const tx0 = bodyX + bodyW - Math.floor(bodyW*0.08); const ty0 = bodyY + Math.floor(bodyH*0.55); ctx.moveTo(tx0, ty0); ctx.quadraticCurveTo(tx0 + Math.floor(bodyW*0.25), ty0 - Math.floor(bodyH*0.3), tx0 + Math.floor(bodyW*0.45), ty0 - Math.floor(bodyH*0.05)); ctx.stroke(); ctx.restore(); }
 
     // export image
     const data = new Image(); data.src = canvas.toDataURL();

@@ -1,51 +1,58 @@
 export class Inventario {
-  constructor(capacidad = 100) {
-    this.capacidad = capacidad;
-    this.items = {}; // item -> cantidad
-    this.maxStack = 999;
+  constructor(slots = 20, capacidadPorSlot = 99){
+    this.slots = new Array(slots).fill(null); // cada slot: {item, cantidad} o null
+    this.capacidadPorSlot = capacidadPorSlot;
+    this.onChange = null; // callback UI: (inventario) => {}
   }
 
-  cantidad(nombre) { return this.items[nombre] || 0; }
+  _emit(){ if(typeof this.onChange === 'function') this.onChange(this); }
 
-  agregar(item, cantidad = 1) {
-    if (!item) return false;
-    this.items[item] = (this.items[item] || 0) + cantidad;
-    const total = Object.values(this.items).reduce((a, b) => a + b, 0);
-    if (total > this.capacidad) {
-      // revertir
-      this.items[item] -= cantidad;
-      if (this.items[item] <= 0) delete this.items[item];
-      return false;
+  agregar(item, cantidad = 1){
+    if(!item) return false;
+    // intentar apilar primero
+    for(let i=0;i<this.slots.length;i++){
+      const s = this.slots[i];
+      if(s && s.item === item && s.cantidad < this.capacidadPorSlot){
+        const espacio = this.capacidadPorSlot - s.cantidad;
+        const uso = Math.min(espacio, cantidad);
+        s.cantidad += uso; cantidad -= uso;
+        if(cantidad === 0){ this._emit(); return true; }
+      }
     }
+    // crear nuevos stacks en slots vacíos
+    for(let i=0;i<this.slots.length;i++){
+      if(this.slots[i] === null){
+        const poner = Math.min(this.capacidadPorSlot, cantidad);
+        this.slots[i] = { item, cantidad: poner };
+        cantidad -= poner;
+        if(cantidad === 0){ this._emit(); return true; }
+      }
+    }
+    // si quedó cantidad, no hay espacio suficiente -> no añadir lo restante
+    this._emit();
+    return false;
+  }
+
+  tiene(item, cantidad = 1){
+    let total = 0;
+    for(const s of this.slots) if(s && s.item === item) total += s.cantidad;
+    return total >= cantidad;
+  }
+
+  quitar(item, cantidad = 1){
+    if(!this.tiene(item, cantidad)) return false;
+    for(let i=0;i<this.slots.length && cantidad>0;i++){
+      const s = this.slots[i];
+      if(!s || s.item !== item) continue;
+      const uso = Math.min(s.cantidad, cantidad);
+      s.cantidad -= uso; cantidad -= uso;
+      if(s.cantidad <= 0) this.slots[i] = null;
+    }
+    this._emit();
     return true;
   }
 
-  añadir(item, cantidad = 1) { return this.agregar(item, cantidad); }
-  add(item, cantidad = 1) { return this.agregar(item, cantidad); }
-
-  tiene(item, cantidad = 1) { return (this.items[item] || 0) >= cantidad; }
-
-  quitar(item, cantidad = 1) {
-    if (!this.tiene(item, cantidad)) return false;
-    this.items[item] -= cantidad;
-    if (this.items[item] <= 0) delete this.items[item];
-    return true;
-  }
-
-  remove(item, cantidad = 1) { return this.quitar(item, cantidad); }
-
-  // persistencia simple
-  guardar(key = 'ws_inventario') {
-    try { localStorage.setItem(key, JSON.stringify({ cap: this.capacidad, items: this.items })); } catch (e) { }
-  }
-  cargar(key = 'ws_inventario') {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return false;
-      const data = JSON.parse(raw);
-      this.capacidad = data.cap || this.capacidad;
-      this.items = data.items || {};
-      return true;
-    } catch (e) { return false; }
-  }
+  // persistencia simple (serialize slots)
+  guardar(key='ws_inventario_slots'){ try { localStorage.setItem(key, JSON.stringify(this.slots)); } catch(e){} }
+  cargar(key='ws_inventario_slots'){ try { const raw = localStorage.getItem(key); if(!raw) return false; this.slots = JSON.parse(raw); this._emit(); return true; } catch(e){ return false; } }
 }
