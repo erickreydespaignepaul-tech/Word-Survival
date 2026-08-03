@@ -50,26 +50,30 @@ export class Criaturas {
       if(countChunk >= this.spawnPorChunk) continue;
       // intentar spawns
       for(let i=0;i<this.spawnPorChunk - countChunk;i++){
-        if(Math.random() < this.spawnRate){
-          // escoger una posicion aleatoria en el chunk en tiles
-          const tx = sx * this.mundo.chunks.tamano + Math.floor(Math.random()*this.mundo.chunks.tamano);
-          const ty = sy * this.mundo.chunks.tamano + Math.floor(Math.random()*this.mundo.chunks.tamano);
+        // usar PRNG determinista por mundo/chunk para reproducibilidad
+        const seed = (this.mundo.seed >>> 0) ^ (sx*73856093) ^ (sy*19349663) ^ i;
+        const prng = (function(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })(seed);
+        if(prng() < this.spawnRate){
+          // escoger una posicion reproducible en el chunk en tiles
+          const tx = sx * this.mundo.chunks.tamano + Math.floor(prng() * this.mundo.chunks.tamano);
+          const ty = sy * this.mundo.chunks.tamano + Math.floor(prng() * this.mundo.chunks.tamano);
           // determinar bioma en esa tile
           const b = this.mundo.chunks.biome(tx,ty);
           // escoger especie compatible
           const candidatos = ESPECIES.filter(s=>s.biomasPreferidos.includes(b));
           if(candidatos.length===0) continue;
-          const especie = candidatos[Math.floor(Math.random()*candidatos.length)];
-          // crear criatura
+          const especie = candidatos[Math.floor(prng()*candidatos.length)];
+          // crear criatura con modelo cuya apariencia depende de world seed + posición
+          const modelSeed = (this.mundo.seed >>> 0) ^ hashString(especie.nombre) ^ tx ^ (ty<<8);
           const criatura = {
-            id: `${especie.id}-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+            id: `${especie.id}-${Date.now()}-${Math.floor(prng()*1000)}`,
             especieId: especie.id,
             especie,
             x: tx,
             y: ty,
-            anim: Math.random()*10,
+            anim: prng()*10,
             vel: especie.tamaño || 1,
-            modelo: new ModeloAnimal(especie),
+            modelo: new ModeloAnimal(especie, modelSeed),
             vida: 20 + (especie.rareza||1)*10
           };
           this.lista.push(criatura);
@@ -97,3 +101,5 @@ export class Criaturas {
     return this.lista.find(c=>Math.floor(c.x)===tileX && Math.floor(c.y)===tileY);
   }
 }
+
+function hashString(s){ let h=0; for(let i=0;i<s.length;i++) h=(h<<5)-h+ s.charCodeAt(i)|0; return Math.abs(h); }
